@@ -74,11 +74,11 @@ async function smartCheckAccessibility(url) {
         if (data.status === "online") {
             // Isolate the false-positive 403 blocks returned directly from the target infrastructure
             if (data.http_code === 403) {
-                return { status: 'sanctioned', ms: data.latency_ms, code: data.http_code };
+                return { status: 'sanctioned', ms: data.latency_ms, code: data.http_code }; // ALIGNED: .ms maps to .latency_ms
             }
-            return { status: 'online', ms: data.latency_ms, code: data.http_code };
+            return { status: 'online', ms: data.latency_ms, code: data.http_code }; // ALIGNED: .ms maps to .latency_ms
         } else {
-            return { status: 'blocked', ms: data.latency_ms || "∞" };
+            return { status: 'blocked', ms: "∞" };
         }
 
     } catch (error) {
