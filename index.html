@@ -1,80 +1,93 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa" dir="rtl" id="htmlTag">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Internet Accessibility Checker</title>
+    <title>سامانه پایش فیلترینگ | Censorship Monitor</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4 antialiased transition-all duration-300">
 
-    <div class="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-6 border border-gray-700">
-        <h1 class="text-2xl font-bold text-center mb-2 text-blue-400">آیا سایت فیلتر است؟</h1>
-        <p class="text-gray-400 text-sm text-center mb-6">Check if a website is accessible on your current internet connection.</p>
+    <div class="max-w-xl w-full bg-gray-800 rounded-2xl shadow-2xl p-6 border border-gray-700 relative">
+        
+        <button id="langToggle" class="absolute top-4 left-4 bg-gray-700 hover:bg-gray-600 text-xs text-gray-300 font-semibold py-1 px-3 rounded-lg border border-gray-600 cursor-pointer transition">
+            English
+        </button>
 
-        <form id="checkerForm" class="space-y-4">
-            <div>
-                <label for="urlInput" class="block text-sm font-medium text-gray-300 mb-1">Website URL</label>
-                <input 
-                    type="text" 
-                    id="urlInput" 
-                    placeholder="example.com" 
-                    required
-                    class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-white"
-                >
+        <header class="text-center mb-6 mt-4">
+            <h1 id="title" class="text-2xl font-black text-blue-400 mb-2">سامانه پایش هوشمند فیلترینگ</h1>
+            <p id="subtitle" class="text-gray-400 text-sm">بررسی چندلایه دسترسی به وب‌سایت‌ها بر اساس اختلالات شبکه</p>
+        </header>
+
+        <section class="bg-gray-750 p-4 rounded-xl border border-gray-700/60 mb-6 shadow-md">
+            <form id="instantCheckerForm" class="space-y-3">
+                <div>
+                    <label id="instantLabel" for="instantUrlInput" class="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">🔍 تست سریع و آنی یک سایت</label>
+                    <div class="flex gap-2">
+                        <input 
+                            type="text" 
+                            id="instantUrlInput" 
+                            placeholder="example.com" 
+                            required
+                            class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-white text-left placeholder-gray-500 text-sm"
+                            dir="ltr"
+                        >
+                        <button 
+                            type="submit" 
+                            id="instantSubmitBtn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-xl transition duration-200 cursor-pointer whitespace-nowrap text-xs shadow-md"
+                        >
+                            بررسی آنی
+                        </button>
+                    </div>
+                </div>
+            </form>
+            <div id="instantResult" class="mt-3 hidden p-3 rounded-xl text-center font-bold border text-sm transition-all"></div>
+        </section>
+
+        <section class="mb-6">
+            <form id="addToListForm" class="space-y-2">
+                <div>
+                    <label id="addListLabel" for="listUrlInput" class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">➕ افزودن وب‌سایت جدید به لیست پایش شما</label>
+                    <div class="flex gap-2">
+                        <input 
+                            type="text" 
+                            id="listUrlInput" 
+                            placeholder="mysite.com" 
+                            required
+                            class="flex-1 px-4 py-2 bg-gray-750 border border-gray-600/70 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-white text-left placeholder-gray-500 text-sm"
+                            dir="ltr"
+                        >
+                        <button 
+                            type="submit" 
+                            id="listSubmitBtn"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-xl transition duration-200 cursor-pointer whitespace-nowrap text-xs shadow-md"
+                        >
+                            افزودن به لیست
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <hr class="border-gray-700 my-5">
+
+        <section>
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="quickCheckTitle" class="text-xs font-bold text-gray-400 uppercase tracking-wider">وضعیت سرویس‌های پایش شده</h3>
+                <button id="checkAllBtn" class="text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer transition">
+                    تست همه همزمان ⚡
+                </button>
             </div>
-            <button 
-                type="submit" 
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
-            >
-                Check Status
-            </button>
-        </form>
-
-        <div id="result" class="mt-6 hidden p-4 rounded-lg text-center font-medium">
-            </div>
+            
+            <div id="targetsGrid" class="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+                </div>
+        </section>
     </div>
 
-    <script>
-        document.getElementById('checkerForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const input = document.getElementById('urlInput').value.trim();
-            const resultDiv = document.getElementById('result');
-            
-            // Clean up the URL input (ensure it has https://)
-            let url = input;
-            if (!/^https?:\/\//i.test(url)) {
-                url = 'https://' + url;
-            }
-
-            // Reset UI to loading state
-            resultDiv.className = "mt-6 p-4 rounded-lg text-center font-medium bg-gray-700 text-gray-300";
-            resultDiv.innerText = "Checking... Please wait.";
-            resultDiv.classList.remove('hidden');
-
-            // Setup a timeout controller (if it takes longer than 5 seconds, assume blocked)
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-            try {
-                // We use 'no-cors' because we only care if the server responds, 
-                // we don't need to read the website's actual data.
-                await fetch(url, { mode: 'no-cors', signal: controller.signal });
-                
-                // If fetch doesn't throw an error, the user's internet successfully reached the site
-                clearTimeout(timeoutId);
-                resultDiv.className = "mt-6 p-4 rounded-lg text-center font-bold bg-green-900/50 text-green-400 border border-green-600";
-                resultDiv.innerText = "✅ Accessible! This site is NOT filtered on your connection.";
-                
-            } catch (error) {
-                clearTimeout(timeoutId);
-                
-                // If it timed out or network failed, it's highly likely filtered
-                resultDiv.className = "mt-6 p-4 rounded-lg text-center font-bold bg-red-900/50 text-red-400 border border-red-600";
-                resultDiv.innerText = "❌ Blocked / Unreachable. This site is likely filtered.";
-            }
-        });
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>

@@ -1,156 +1,227 @@
-// --- 1. CONFIGURATION & TRANSLATIONS ---
-const popularSites = [
+// --- 1. CONFIGURATION & STATE ---
+const DEFAULT_SITES = [
     { name: "Telegram", domain: "https://t.me" },
     { name: "Instagram", domain: "https://instagram.com" },
     { name: "YouTube", domain: "https://youtube.com" },
     { name: "WhatsApp", domain: "https://whatsapp.com" },
-    { name: "Google", domain: "https://google.com" },
-    { name: "Wikipedia", domain: "https://wikipedia.org" }
+    { name: "Google", domain: "https://google.com" }
 ];
 
 const translations = {
     fa: {
-        title: "آیا این سایت فیلتر است؟",
-        subtitle: "بررسی دسترسی به وب‌سایت‌ها از روی اینترنت فعلی شما",
-        inputLabel: "آدرس وب‌سایت",
-        submitBtn: "بررسی وضعیت",
-        quickCheckTitle: "تست سریع سرویس‌های محبوب",
+        title: "سامانه پایش هوشمند فیلترینگ",
+        subtitle: "بررسی چندلایه دسترسی به وب‌سایت‌ها بر اساس اختلالات شبکه",
+        instantLabel: "🔍 تست سریع و آنی یک سایت",
+        instantSubmitBtn: "بررسی آنی",
+        addListLabel: "➕ افزودن وب‌سایت جدید به لیست پایش شما",
+        listSubmitBtn: "افزودن به لیست",
+        quickCheckTitle: "وضعیت سرویس‌های پایش شده",
         checkAllBtn: "تست همه همزمان ⚡",
-        checking: "در حال بررسی... لطفا صبر کنید.",
-        accessible: "✅ آزاد! این سایت روی اینترنت شما فیلتر نیست.",
-        blocked: "❌ فیلتر یا در دسترس نیست! این سایت احتمالاً مسدود است.",
-        langButton: "English"
+        langButton: "English",
+        statusChecking: "⏳ در حال بررسی...",
+        statusOnline: "🟢 آزاد",
+        statusBlocked: "🔴 فیلتر/اختلال",
+        instantChecking: "در حال آنالیز کانال ارتباطی... لطفا صبر کنید.",
+        instantAccessible: "✅ آزاد! این وب‌سایت در حال حاضر روی اینترنت شما فیلتر نیست.",
+        instantBlocked: "❌ مسدود! ارتباط برقرار نشد؛ این سایت احتمالاً فیلتر است."
     },
     en: {
-        title: "Is it Blocked in Iran?",
-        subtitle: "Check if a website is accessible on your current internet connection",
-        inputLabel: "Website URL",
-        submitBtn: "Check Status",
-        quickCheckTitle: "Quick Popular Targets",
+        title: "Smart Censorship Monitor",
+        subtitle: "Multi-layered accessibility check based on network anomalies",
+        instantLabel: "🔍 Instant One-Time Website Checker",
+        instantSubmitBtn: "Check Now",
+        addListLabel: "➕ Add New Domain to Your Monitor List",
+        listSubmitBtn: "Add to List",
+        quickCheckTitle: "Monitored Services Status",
         checkAllBtn: "Check All Simultaneously ⚡",
-        checking: "Checking... Please wait.",
-        accessible: "✅ Accessible! This site is NOT filtered on your network.",
-        blocked: "❌ Blocked / Unreachable. This site is likely filtered.",
-        langButton: "فارسی"
+        langButton: "فارسی",
+        statusChecking: "⏳ Checking...",
+        statusOnline: "🟢 Online",
+        statusBlocked: "🔴 Blocked",
+        instantChecking: "Analyzing network packets... Please wait.",
+        instantAccessible: "✅ Free! This website is fully accessible on your connection.",
+        instantBlocked: "❌ Blocked! Connection failed; this site is likely filtered."
     }
 };
 
 let currentLang = 'fa';
+let customSites = JSON.parse(localStorage.getItem('custom_monitor_sites')) || DEFAULT_SITES;
 
-// --- 2. CORE LOGIC: THE CHECKER FUNCTION ---
-async function checkWebsiteAccessibility(url) {
+// --- 2. THE CORE SMART CHECKING ENGINE ---
+async function smartCheckAccessibility(url) {
     let targetUrl = url.trim();
     if (!/^https?:\/\//i.test(targetUrl)) {
         targetUrl = 'https://' + targetUrl;
     }
 
+    // Cache Eviction Engine
+    const urlObj = new URL(targetUrl);
+    urlObj.searchParams.set('__cb__', Date.now() + Math.random().toString(36).substring(2, 7));
+    
+    const startTime = performance.now();
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 4500); // 4.5s GFW threshold drop match
 
     try {
-        await fetch(targetUrl, { mode: 'no-cors', signal: controller.signal });
+        await fetch(urlObj.toString(), { 
+            mode: 'no-cors', 
+            signal: controller.signal,
+            credentials: 'omit',
+            cache: 'no-store'
+        });
+        
         clearTimeout(timeoutId);
-        return true;
+        const duration = performance.now() - startTime;
+        
+        if (duration > 4000) return { status: 'disrupted', ms: Math.round(duration) };
+        return { status: 'online', ms: Math.round(duration) };
+
     } catch (error) {
         clearTimeout(timeoutId);
-        return false;
+        const duration = performance.now() - startTime;
+        return { status: 'blocked', ms: Math.round(duration) };
     }
 }
 
-// --- 3. UI RENDERING & TRANSLATION LOGIC ---
+// --- 3. UI RENDERING & TRANSLATION PIPELINE ---
 function setLanguage(lang) {
     currentLang = lang;
     const t = translations[lang];
     const html = document.getElementById('htmlTag');
     
-    if(lang === 'fa') {
-        html.setAttribute('dir', 'rtl');
-        html.setAttribute('lang', 'fa');
-    } else {
-        html.setAttribute('dir', 'ltr');
-        html.setAttribute('lang', 'en');
-    }
+    html.setAttribute('dir', lang === 'fa' ? 'rtl' : 'ltr');
+    html.setAttribute('lang', lang);
 
     document.getElementById('title').innerText = t.title;
     document.getElementById('subtitle').innerText = t.subtitle;
-    document.getElementById('inputLabel').innerText = t.inputLabel;
-    document.getElementById('submitBtn').innerText = t.submitBtn;
+    document.getElementById('instantLabel').innerText = t.instantLabel;
+    document.getElementById('instantSubmitBtn').innerText = t.instantSubmitBtn;
+    document.getElementById('addListLabel').innerText = t.addListLabel;
+    document.getElementById('listSubmitBtn').innerText = t.listSubmitBtn;
     document.getElementById('quickCheckTitle').innerText = t.quickCheckTitle;
     document.getElementById('checkAllBtn').innerText = t.checkAllBtn;
     document.getElementById('langToggle').innerText = t.langButton;
     
-    document.getElementById('result').classList.add('hidden');
-    
-    renderQuickGrid();
+    document.getElementById('instantResult').classList.add('hidden');
+    renderMonitorGrid();
 }
 
-function renderQuickGrid() {
+function renderMonitorGrid() {
     const grid = document.getElementById('targetsGrid');
     grid.innerHTML = '';
 
-    popularSites.forEach((site, index) => {
-        const btn = document.createElement('button');
-        btn.id = `site-btn-${index}`;
-        btn.className = "flex justify-between items-center bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-xl border border-gray-600 transition text-sm cursor-pointer";
+    customSites.forEach((site, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = "flex items-center justify-between bg-gray-700/50 p-3 rounded-xl border border-gray-600/40 hover:border-gray-500 transition shadow-sm";
         
-        btn.innerHTML = `
-            <span>${site.name}</span>
-            <span id="site-status-${index}" class="text-xs text-gray-400">•</span>
+        wrapper.innerHTML = `
+            <div class="flex flex-col">
+                <span class="font-bold text-white text-xs md:text-sm">${site.name}</span>
+                <span class="text-[11px] text-gray-400 font-mono tracking-tight select-all">${site.domain.replace(/^https?:\/\//,'')}</span>
+            </div>
+            <div class="flex items-center space-x-2 space-x-reverse">
+                <span id="site-ms-${index}" class="text-[10px] font-mono text-gray-500 hidden"></span>
+                <span id="site-status-${index}" class="text-xs font-semibold bg-gray-800 px-3 py-1 rounded-md border border-gray-700 min-w-[80px] text-center cursor-pointer hover:bg-gray-700 transition">تست</span>
+                <button onclick="removeCustomSite(${index})" class="text-gray-500 hover:text-red-400 text-xs px-1 transition cursor-pointer" title="Delete">🗑️</button>
+            </div>
         `;
         
-        btn.addEventListener('click', () => runIndividualQuickCheck(site.domain, index));
-        grid.appendChild(btn);
+        wrapper.querySelector(`#site-status-${index}`).addEventListener('click', () => runGridItemTest(site.domain, index));
+        grid.appendChild(wrapper);
     });
 }
 
-async function runIndividualQuickCheck(domain, index) {
-    const statusIndicator = document.getElementById(`site-status-${index}`);
-    statusIndicator.className = "text-xs text-yellow-400 animate-pulse font-bold";
-    statusIndicator.innerText = "⏳";
+// --- 4. RUNNING TEST ACTION OPERATIONS ---
 
-    const isAccessible = await checkWebsiteAccessibility(domain);
+// Test targeting a specific row element inside the tracking list
+async function runGridItemTest(domain, index) {
+    const statusLabel = document.getElementById(`site-status-${index}`);
+    const msLabel = document.getElementById(`site-ms-${index}`);
+    const t = translations[currentLang];
 
-    if(isAccessible) {
-        statusIndicator.className = "text-xs text-green-400 font-bold";
-        statusIndicator.innerText = "🟢";
+    statusLabel.className = "text-xs font-semibold bg-yellow-950/40 text-yellow-400 border border-yellow-700/50 px-3 py-1 rounded-md text-center animate-pulse";
+    statusLabel.innerText = t.statusChecking;
+    msLabel.classList.add('hidden');
+
+    const result = await smartCheckAccessibility(domain);
+
+    msLabel.innerText = `${result.ms}ms`;
+    msLabel.classList.remove('hidden');
+
+    if (result.status === 'online') {
+        statusLabel.className = "text-xs font-semibold bg-green-950/40 text-green-400 border border-green-700/50 px-3 py-1 rounded-md text-center";
+        statusLabel.innerText = t.statusOnline;
     } else {
-        statusIndicator.className = "text-xs text-red-500 font-bold";
-        statusIndicator.innerText = "🔴";
+        statusLabel.className = "text-xs font-semibold bg-red-950/40 text-red-400 border border-red-700/50 px-3 py-1 rounded-md text-center";
+        statusLabel.innerText = t.statusBlocked;
     }
 }
 
-// --- 4. EVENT LISTENERS ---
+function removeCustomSite(index) {
+    customSites.splice(index, 1);
+    localStorage.setItem('custom_monitor_sites', JSON.stringify(customSites));
+    renderMonitorGrid();
+}
 
-document.getElementById('checkerForm').addEventListener('submit', async function(e) {
+// --- 5. EVENT SUBMISSION LISTENERS ---
+
+// FORM 1 Trigger: Instant Sandbox Checker
+document.getElementById('instantCheckerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const input = document.getElementById('urlInput').value;
-    const resultDiv = document.getElementById('result');
+    const input = document.getElementById('instantUrlInput').value.trim();
+    const resultDiv = document.getElementById('instantResult');
     const t = translations[currentLang];
 
-    resultDiv.className = "mb-6 p-4 rounded-xl text-center font-medium bg-gray-700 text-gray-300 border-gray-600";
-    resultDiv.innerText = t.checking;
+    resultDiv.className = "mt-3 p-3 rounded-xl text-center font-medium bg-gray-700 text-gray-300 border-gray-600";
+    resultDiv.innerText = t.instantChecking;
     resultDiv.classList.remove('hidden');
 
-    const accessible = await checkWebsiteAccessibility(input);
+    const execution = await smartCheckAccessibility(input);
 
-    if (accessible) {
-        resultDiv.className = "mb-6 p-4 rounded-xl text-center font-bold bg-green-950/40 text-green-400 border-green-600/50";
-        resultDiv.innerText = t.accessible;
+    if (execution.status === 'online') {
+        resultDiv.className = "mt-3 p-3 rounded-xl text-center font-bold bg-green-950/40 text-green-400 border-green-600/50 text-xs md:text-sm";
+        resultDiv.innerText = `${t.instantAccessible} (${execution.ms}ms)`;
     } else {
-        resultDiv.className = "mb-6 p-4 rounded-xl text-center font-bold bg-red-950/40 text-red-400 border-red-600/50";
-        resultDiv.innerText = t.blocked;
+        resultDiv.className = "mt-3 p-3 rounded-xl text-center font-bold bg-red-950/40 text-red-400 border-red-600/50 text-xs md:text-sm";
+        resultDiv.innerText = `${t.instantBlocked} (${execution.ms}ms)`;
     }
 });
 
+// FORM 2 Trigger: Persistent Append Array List
+document.getElementById('addToListForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const input = document.getElementById('listUrlInput').value.trim();
+    if(!input) return;
+
+    let cleanDomain = input;
+    if (!/^https?:\/\//i.test(cleanDomain)) {
+        cleanDomain = 'https://' + cleanDomain;
+    }
+
+    try {
+        const urlObj = new URL(cleanDomain);
+        const name = urlObj.hostname.replace('www.', '');
+        
+        customSites.push({ name: name, domain: urlObj.origin });
+        localStorage.setItem('custom_monitor_sites', JSON.stringify(customSites));
+        
+        document.getElementById('listUrlInput').value = '';
+        renderMonitorGrid();
+    } catch(err) {
+        alert("Invalid URL Format.");
+    }
+});
+
+// Global Controls Links
 document.getElementById('langToggle').addEventListener('click', () => {
     setLanguage(currentLang === 'fa' ? 'en' : 'fa');
 });
 
 document.getElementById('checkAllBtn').addEventListener('click', () => {
-    popularSites.forEach((site, index) => {
-        runIndividualQuickCheck(site.domain, index);
+    customSites.forEach((site, index) => {
+        runGridItemTest(site.domain, index);
     });
 });
 
-// Initialize App on load
+// Execute Lifecycle
 setLanguage('fa');
