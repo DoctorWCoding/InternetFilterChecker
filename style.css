@@ -1,8 +1,20 @@
+/* Apply Vazirmatn globally to the entire app */
 body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Custom smooth transition for status dots */
+/* Optional: Make titles stand out with a slightly heavier font weight */
+h1, h2, h3, button {
+    font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
+    font-weight: 700;
+}
+
+/* Ensure monospace layout for numbers and URLs stays clean */
+input[dir="ltr"], .font-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+/* Custom smooth pulse animation for the checking status */
 .animate-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
