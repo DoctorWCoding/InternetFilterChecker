@@ -93,7 +93,7 @@ function smartCheckAccessibility(url) {
                 // 🧠 THE CENSORSHIP DETECTION LOGIC:
                 // If the connection failed instantly (under 600ms), the server rejected us (Sanction/403).
                 // If it took longer, it was likely intercepted or blocked by the network firewall.
-                if (duration < 600) {
+                if (duration < 10000) {
                     resolve({ status: 'sanctioned', ms: Math.round(duration), code: "403" });
                 } else {
                     resolve({ status: 'blocked', ms: Math.round(duration) });
