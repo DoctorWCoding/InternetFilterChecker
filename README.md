@@ -2,7 +2,7 @@
 
 I built this lightweight, client-side tool to help users instantly check what's actually happening on their current connection. It gives you a clear picture of whether a site is genuinely down, or just locked behind the national gateway.
 
-👉 **[Live Demo Link](https://YOUR-GITHUB-USERNAME.github.io/iran-site-checker/)** *(Replace with your actual link!)*
+👉 **[Live Demo Link](https://doctorwcoding.github.io/InternetFilterChecker/)**
 
 ---
 
@@ -34,7 +34,7 @@ Since this is a pure front-end application, there is no messy backend, node modu
 
 1. Clone the repo:
    ```bash
-   git clone [https://github.com/YOUR-GITHUB-USERNAME/iran-site-checker.git](https://github.com/YOUR-GITHUB-USERNAME/iran-site-checker.git)
+   git clone [https://doctorwcoding.github.io/InternetFilterChecker/](https://github.com/DoctorWCoding/InternetFilterChecker.git)
 
 
 ## License
