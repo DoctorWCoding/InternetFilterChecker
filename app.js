@@ -23,7 +23,8 @@ const translations = {
         statusBlocked: "🔴 فیلتر/اختلال",
         instantChecking: "در حال آنالیز کانال ارتباطی... لطفا صبر کنید.",
         instantAccessible: "✅ آزاد! این وب‌سایت در حال حاضر روی اینترنت شما فیلتر نیست.",
-        instantBlocked: "❌ مسدود! ارتباط برقرار نشد؛ این سایت احتمالاً فیلتر است."
+        instantBlocked: "❌ مسدود! ارتباط برقرار نشد؛ این سایت احتمالاً فیلتر است.",
+        credit: 'توسعه داده شده توسط <a href="https://github.com/DoctorWCoding" target="_blank" class="text-blue-400 hover:underline font-bold transition">Adrin Jomeh</a>'
     },
     en: {
         title: "Smart Censorship Monitor",
@@ -40,9 +41,10 @@ const translations = {
         statusBlocked: "🔴 Blocked",
         instantChecking: "Analyzing network packets... Please wait.",
         instantAccessible: "✅ Free! This website is fully accessible on your connection.",
-        instantBlocked: "❌ Blocked! Connection failed; this site is likely filtered."
+        instantBlocked: "❌ Blocked! Connection failed; this site is likely filtered.",
+        credit: 'Developed by <a href="DoctorWCoding" target="_blank" class="text-blue-400 hover:underline font-bold transition">Adrin Jomeh</a>'
     }
-};
+    }
 
 let currentLang = 'fa';
 let customSites = JSON.parse(localStorage.getItem('custom_monitor_sites')) || DEFAULT_SITES;
@@ -102,6 +104,8 @@ function setLanguage(lang) {
     document.getElementById('checkAllBtn').innerText = t.checkAllBtn;
     document.getElementById('langToggle').innerText = t.langButton;
     
+    document.getElementById('creditText').innerHTML = t.credit;
+
     document.getElementById('instantResult').classList.add('hidden');
     renderMonitorGrid();
 }
