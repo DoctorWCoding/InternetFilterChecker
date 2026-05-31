@@ -1,20 +1,66 @@
-/* Apply Vazirmatn globally to the entire app */
-body {
-    font-family: 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+/* ==========================================================================
+   🎨 THEME CONFIGURATION (Change your colors here!)
+   ========================================================================== */
+:root {
+    /* Backgrounds */
+    --main-bg-color: #255C99;       /* The deep background of the whole screen */
+    --card-bg-color: #31363B;       /* The color of the main box panel */
+    --section-bg-color: #1e2942;    /* The color of the inner form boxes */
+
+    /* Text */
+    --text-primary: #f3f4f6;         /* Main text color */
+    --text-secondary: #9ca3af;       /* Subtitles and domain text color */
+
+    /* Accent & Brand Colors */
+    --primary-button: #08b300;      /* Check button (Blue) */
+    --primary-button-hover: #B3001B;
+    
+    --secondary-button: #37373d96;    /* Add button (Emerald Green) */
+    --secondary-button-hover: #047857;
 }
 
-/* Optional: Make titles stand out with a slightly heavier font weight */
-h1, h2, h3, button {
+/* ==========================================================================
+   ⚙️ CORE STYLES (Do not change unless you need to)
+   ========================================================================== */
+body {
+    background-color: var(--main-bg-color) !important;
+    color: var(--text-primary) !important;
     font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
+}
+
+/* Apply theme to main container and inner components */
+.main-card {
+    background-color: var(--card-bg-color) !important;
+}
+
+.inner-section {
+    background-color: var(--section-bg-color) !important;
+}
+
+/* Custom button overrides */
+.btn-primary {
+    background-color: var(--primary-button) !important;
+}
+.btn-primary:hover {
+    background-color: var(--primary-button-hover) !important;
+}
+
+.btn-secondary {
+    background-color: var(--secondary-button) !important;
+}
+.btn-secondary:hover {
+    background-color: var(--secondary-button-hover) !important;
+}
+
+/* Typography Helpers */
+h1, h2, h3, button {
     font-weight: 700;
 }
 
-/* Ensure monospace layout for numbers and URLs stays clean */
 input[dir="ltr"], .font-mono {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace !important;
 }
 
-/* Custom smooth pulse animation for the checking status */
 .animate-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

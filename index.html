@@ -4,18 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سامانه پایش فیلترینگ | Censorship Monitor</title>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4 antialiased transition-all duration-300">
+<body class="min-h-screen flex items-center justify-center p-4 antialiased transition-all duration-300">
 
-    <div class="max-w-xl w-full bg-gray-800 rounded-2xl shadow-2xl p-6 border border-gray-700 relative">
+    <div class="main-card max-w-xl w-full rounded-2xl shadow-2xl p-6 border border-gray-700/50 relative">
         
-        <button id="langToggle" class="absolute top-4 left-4 bg-gray-700 hover:bg-gray-600 text-xs text-gray-300 font-semibold py-1 px-3 rounded-lg border border-gray-600 cursor-pointer transition">
+        <button id="langToggle" class="absolute top-4 left-4 bg-gray-700/50 hover:bg-gray-600/50 text-xs text-gray-300 font-semibold py-1 px-3 rounded-lg border border-gray-600 cursor-pointer transition">
             English
         </button>
 
@@ -24,7 +26,7 @@
             <p id="subtitle" class="text-gray-400 text-sm">بررسی چندلایه دسترسی به وب‌سایت‌ها بر اساس اختلالات شبکه</p>
         </header>
 
-        <section class="bg-gray-750 p-4 rounded-xl border border-gray-700/60 mb-6 shadow-md">
+        <section class="inner-section p-4 rounded-xl border border-gray-700/40 mb-6 shadow-md">
             <form id="instantCheckerForm" class="space-y-3">
                 <div>
                     <label id="instantLabel" for="instantUrlInput" class="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">🔍 تست سریع و آنی یک سایت</label>
@@ -34,13 +36,13 @@
                             id="instantUrlInput" 
                             placeholder="example.com" 
                             required
-                            class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-white text-left placeholder-gray-500 text-sm"
+                            class="flex-1 px-4 py-2 bg-gray-900/40 border border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-white text-left placeholder-gray-500 text-sm"
                             dir="ltr"
                         >
                         <button 
                             type="submit" 
                             id="instantSubmitBtn"
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-xl transition duration-200 cursor-pointer whitespace-nowrap text-xs shadow-md"
+                            class="btn-primary text-white font-bold py-2 px-5 rounded-xl transition duration-200 cursor-pointer whitespace-nowrap text-xs shadow-md"
                         >
                             بررسی آنی
                         </button>
@@ -60,13 +62,13 @@
                             id="listUrlInput" 
                             placeholder="mysite.com" 
                             required
-                            class="flex-1 px-4 py-2 bg-gray-750 border border-gray-600/70 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-white text-left placeholder-gray-500 text-sm"
+                            class="flex-1 px-4 py-2 bg-gray-900/20 border border-gray-600/70 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-white text-left placeholder-gray-500 text-sm"
                             dir="ltr"
                         >
                         <button 
                             type="submit" 
                             id="listSubmitBtn"
-                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-xl transition duration-200 cursor-pointer whitespace-nowrap text-xs shadow-md"
+                            class="btn-secondary text-white font-bold py-2 px-4 rounded-xl transition duration-200 cursor-pointer whitespace-nowrap text-xs shadow-md"
                         >
                             افزودن به لیست
                         </button>
