@@ -7,6 +7,9 @@ const DEFAULT_SITES = [
     { name: "Google", domain: "https://google.com" }
 ];
 
+// Link your frontend securely to your live PythonAnywhere background server core
+const BACKEND_API = "https://doctorw.pythonanywhere.com/api/check";
+
 const translations = {
     fa: {
         title: "سامانه پایش هوشمند فیلترینگ",
@@ -21,9 +24,11 @@ const translations = {
         statusChecking: "⏳ در حال بررسی...",
         statusOnline: "🟢 آزاد",
         statusBlocked: "🔴 فیلتر/اختلال",
+        statusSanctioned: "🚫 تحریم (خطای 403)",
         instantChecking: "در حال آنالیز کانال ارتباطی... لطفا صبر کنید.",
         instantAccessible: "✅ آزاد! این وب‌سایت در حال حاضر روی اینترنت شما فیلتر نیست.",
         instantBlocked: "❌ مسدود! ارتباط برقرار نشد؛ این سایت احتمالاً فیلتر است.",
+        instantSanctioned: "🚫 تحریم! سرور مقصد متصل شد، اما دسترسی به کاربران ایرانی را مسدود کرده است.",
         credit: 'توسعه داده شده توسط <a href="https://github.com/DoctorWCoding" target="_blank" class="text-blue-400 hover:underline font-bold transition">Adrin Jomeh</a>'
     },
     en: {
@@ -39,49 +44,45 @@ const translations = {
         statusChecking: "⏳ Checking...",
         statusOnline: "🟢 Online",
         statusBlocked: "🔴 Blocked",
+        statusSanctioned: "🚫 Sanctioned (403)",
         instantChecking: "Analyzing network packets... Please wait.",
         instantAccessible: "✅ Free! This website is fully accessible on your connection.",
         instantBlocked: "❌ Blocked! Connection failed; this site is likely filtered.",
-        credit: 'Developed by <a href="DoctorWCoding" target="_blank" class="text-blue-400 hover:underline font-bold transition">Adrin Jomeh</a>'
+        instantSanctioned: "🚫 Sanctioned! The network connection succeeded, but the server is geoblocking your connection.",
+        credit: 'Developed by <a href="https://github.com/DoctorWCoding" target="_blank" class="text-blue-400 hover:underline font-bold transition">Adrin Jomeh</a>'
     }
-    }
+};
 
 let currentLang = 'fa';
 let customSites = JSON.parse(localStorage.getItem('custom_monitor_sites')) || DEFAULT_SITES;
 
-// --- 2. THE CORE SMART CHECKING ENGINE ---
+// --- 2. THE CORE SMART CHECKING ENGINE (PROXIED TO BACKEND) ---
 async function smartCheckAccessibility(url) {
     let targetUrl = url.trim();
     if (!/^https?:\/\//i.test(targetUrl)) {
         targetUrl = 'https://' + targetUrl;
     }
 
-    // Cache Eviction Engine
-    const urlObj = new URL(targetUrl);
-    urlObj.searchParams.set('__cb__', Date.now() + Math.random().toString(36).substring(2, 7));
-    
-    const startTime = performance.now();
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500); // 4.5s GFW threshold drop match
-
     try {
-        await fetch(urlObj.toString(), { 
-            mode: 'no-cors', 
-            signal: controller.signal,
-            credentials: 'omit',
-            cache: 'no-store'
-        });
+        // Query the Python backend engine instead of running a client-restricted direct fetch
+        const response = await fetch(`${BACKEND_API}?url=${encodeURIComponent(targetUrl)}`);
         
-        clearTimeout(timeoutId);
-        const duration = performance.now() - startTime;
+        if (!response.ok) throw new Error("API Route failure");
         
-        if (duration > 4000) return { status: 'disrupted', ms: Math.round(duration) };
-        return { status: 'online', ms: Math.round(duration) };
+        const data = await response.json();
+
+        if (data.status === "online") {
+            // Isolate the false-positive 403 blocks returned directly from the target infrastructure
+            if (data.http_code === 403) {
+                return { status: 'sanctioned', ms: data.latency_ms, code: data.http_code };
+            }
+            return { status: 'online', ms: data.latency_ms, code: data.http_code };
+        } else {
+            return { status: 'blocked', ms: data.latency_ms || "∞" };
+        }
 
     } catch (error) {
-        clearTimeout(timeoutId);
-        const duration = performance.now() - startTime;
-        return { status: 'blocked', ms: Math.round(duration) };
+        return { status: 'blocked', ms: "∞" };
     }
 }
 
@@ -136,8 +137,6 @@ function renderMonitorGrid() {
 }
 
 // --- 4. RUNNING TEST ACTION OPERATIONS ---
-
-// Test targeting a specific row element inside the tracking list
 async function runGridItemTest(domain, index) {
     const statusLabel = document.getElementById(`site-status-${index}`);
     const msLabel = document.getElementById(`site-ms-${index}`);
@@ -154,7 +153,11 @@ async function runGridItemTest(domain, index) {
 
     if (result.status === 'online') {
         statusLabel.className = "text-xs font-semibold bg-green-950/40 text-green-400 border border-green-700/50 px-3 py-1 rounded-md text-center";
-        statusLabel.innerText = t.statusOnline;
+        statusLabel.innerText = `${t.statusOnline} (${result.code})`;
+    } else if (result.status === 'sanctioned') {
+        // Distinct amber/orange alert status card formatting for geo-blocks
+        statusLabel.className = "text-xs font-semibold bg-amber-950/40 text-amber-400 border border-amber-700/50 px-3 py-1 rounded-md text-center";
+        statusLabel.innerText = t.statusSanctioned;
     } else {
         statusLabel.className = "text-xs font-semibold bg-red-950/40 text-red-400 border border-red-700/50 px-3 py-1 rounded-md text-center";
         statusLabel.innerText = t.statusBlocked;
@@ -185,6 +188,9 @@ document.getElementById('instantCheckerForm').addEventListener('submit', async f
     if (execution.status === 'online') {
         resultDiv.className = "mt-3 p-3 rounded-xl text-center font-bold bg-green-950/40 text-green-400 border-green-600/50 text-xs md:text-sm";
         resultDiv.innerText = `${t.instantAccessible} (${execution.ms}ms)`;
+    } else if (execution.status === 'sanctioned') {
+        resultDiv.className = "mt-3 p-3 rounded-xl text-center font-bold bg-amber-950/40 text-amber-400 border-amber-600/50 text-xs md:text-sm";
+        resultDiv.innerText = `${t.instantSanctioned} (${execution.ms}ms)`;
     } else {
         resultDiv.className = "mt-3 p-3 rounded-xl text-center font-bold bg-red-950/40 text-red-400 border-red-600/50 text-xs md:text-sm";
         resultDiv.innerText = `${t.instantBlocked} (${execution.ms}ms)`;
