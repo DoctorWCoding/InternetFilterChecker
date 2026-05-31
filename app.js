@@ -8,7 +8,7 @@ const DEFAULT_SITES = [
 ];
 
 // Link your frontend securely to your live PythonAnywhere background server core
-const BACKEND_API = "https://doctorw.pythonanywhere.com/api/check";
+// const BACKEND_API = "https://.pythonanywhere.com/api/check";
 
 const translations = {
     fa: {
@@ -57,33 +57,55 @@ let currentLang = 'fa';
 let customSites = JSON.parse(localStorage.getItem('custom_monitor_sites')) || DEFAULT_SITES;
 
 // --- 2. THE CORE SMART CHECKING ENGINE (PROXIED TO BACKEND) ---
-async function smartCheckAccessibility(url) {
-    let targetUrl = url.trim();
-    if (!/^https?:\/\//i.test(targetUrl)) {
-        targetUrl = 'https://' + targetUrl;
-    }
-
-    try {
-        // Query the Python backend engine instead of running a client-restricted direct fetch
-        const response = await fetch(`${BACKEND_API}?url=${encodeURIComponent(targetUrl)}`);
-        
-        if (!response.ok) throw new Error("API Route failure");
-        
-        const data = await response.json();
-
-        if (data.status === "online") {
-            // Isolate the false-positive 403 blocks returned directly from the target infrastructure
-            if (data.http_code === 403) {
-                return { status: 'sanctioned', ms: data.latency_ms, code: data.http_code }; // ALIGNED: .ms maps to .latency_ms
-            }
-            return { status: 'online', ms: data.latency_ms, code: data.http_code }; // ALIGNED: .ms maps to .latency_ms
-        } else {
-            return { status: 'blocked', ms: "∞" };
+// --- 2. THE LOCAL DEVICE NETWORK CHECKING ENGINE ---
+function smartCheckAccessibility(url) {
+    return new Promise((resolve) => {
+        let targetUrl = url.trim();
+        if (!/^https?:\/\//i.test(targetUrl)) {
+            targetUrl = 'https://' + targetUrl;
         }
 
-    } catch (error) {
-        return { status: 'blocked', ms: "∞" };
-    }
+        try {
+            const urlObj = new URL(targetUrl);
+            // Target the favicon directly to test asset delivery over local ISP
+            const faviconUrl = `${urlObj.origin}/favicon.ico?cb=${Date.now()}`;
+            
+            const startTime = performance.now();
+            const img = new Image();
+            
+            // Set up a strict local GFW drop threshold drop match
+            const timeoutId = setTimeout(() => {
+                img.src = ""; // Stop loading
+                const duration = performance.now() - startTime;
+                resolve({ status: 'blocked', ms: Math.round(duration) });
+            }, 4500);
+
+            img.onload = function() {
+                clearTimeout(timeoutId);
+                const duration = performance.now() - startTime;
+                resolve({ status: 'online', ms: Math.round(duration), code: "OK" });
+            };
+
+            img.onerror = function() {
+                clearTimeout(timeoutId);
+                const duration = performance.now() - startTime;
+                
+                // 🧠 THE CENSORSHIP DETECTION LOGIC:
+                // If the connection failed instantly (under 600ms), the server rejected us (Sanction/403).
+                // If it took longer, it was likely intercepted or blocked by the network firewall.
+                if (duration < 600) {
+                    resolve({ status: 'sanctioned', ms: Math.round(duration), code: "403" });
+                } else {
+                    resolve({ status: 'blocked', ms: Math.round(duration) });
+                }
+            };
+
+            img.src = faviconUrl;
+
+        } catch (e) {
+            resolve({ status: 'blocked', ms: "∞" });
+        }
+    });
 }
 
 // --- 3. UI RENDERING & TRANSLATION PIPELINE ---
@@ -232,6 +254,18 @@ document.getElementById('checkAllBtn').addEventListener('click', () => {
         runGridItemTest(site.domain, index);
     });
 });
+
+
+if (result.status === 'online') {
+    statusLabel.className = "text-xs font-semibold bg-green-950/40 text-green-400 border border-green-700/50 px-3 py-1 rounded-md text-center";
+    statusLabel.innerText = t.statusOnline;
+} else if (result.status === 'sanctioned') {
+    statusLabel.className = "text-xs font-semibold bg-amber-950/40 text-amber-400 border border-amber-700/50 px-3 py-1 rounded-md text-center";
+    statusLabel.innerText = t.statusSanctioned;
+} else {
+    statusLabel.className = "text-xs font-semibold bg-red-950/40 text-red-400 border border-red-700/50 px-3 py-1 rounded-md text-center";
+    statusLabel.innerText = t.statusBlocked;
+}
 
 // Execute Lifecycle
 setLanguage('fa');
