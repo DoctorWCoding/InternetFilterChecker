@@ -53,7 +53,7 @@ const translations = {
 let currentLang = 'fa';
 let customSites = JSON.parse(localStorage.getItem('custom_monitor_sites')) || DEFAULT_SITES;
 
-// --- 2. THE LOCAL DEVICE NETWORK CHECKING ENGINE ---
+// --- 2. THE LOCAL DEVICE NETWORK CHECKING ENGINE (NO MORE HARDCODING) ---
 function smartCheckAccessibility(url) {
     return new Promise((resolve) => {
         let targetUrl = url.trim();
@@ -66,7 +66,7 @@ function smartCheckAccessibility(url) {
         const uniqueUrl = `${urlObj.origin}/?cb=${Date.now()}`;
         const startTime = performance.now();
 
-        // Strict 4-second cutoff for dropped packets (Filtering indicators)
+        // 4-second cutoff for dropped packets (Filtering/Timeout indicators)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
             controller.abort();
@@ -74,13 +74,14 @@ function smartCheckAccessibility(url) {
             resolve({ status: 'blocked', ms: duration });
         }, 4000);
 
-        // 'no-cors' lets us poke the server handshake locally without falling into browser security blocks
+        // We use 'no-cors' mode to force a raw connection request at the network layer
         fetch(uniqueUrl, { 
             mode: 'no-cors', 
             credentials: 'omit',
             signal: controller.signal 
         })
         .then(() => {
+            // Path A: The server responded perfectly with an open connection
             clearTimeout(timeoutId);
             const duration = Math.round(performance.now() - startTime);
             resolve({ status: 'online', ms: duration, code: "OK" });
@@ -89,22 +90,22 @@ function smartCheckAccessibility(url) {
             clearTimeout(timeoutId);
             const duration = Math.round(performance.now() - startTime);
 
-            if (error.name === 'AbortError') return;
-
-            // NETWORK CENSORSHIP DETECTION RULE:
-            // Iranian websites (.ir/aparat) should be checked locally.
-            // If a foreign platform rejects us under 600ms, it's an immediate server-side geoblock.
-            const isDomestic = urlObj.hostname.endsWith('.ir') || urlObj.hostname.includes('aparat');
-
-            if (!isDomestic && duration < 50) {
+            if (error.name === 'AbortError') return; // Handled by timeout
+            
+            if (duration < 150) {
+                // If it fails almost INSTANTLY (under 150ms), the server actively slammed the door.
+                // This is a typical signature of a corporate geoblock/sanction cloud firewall (403).
                 resolve({ status: 'sanctioned', ms: duration });
+            } else if (duration >= 150 && duration < 800) {
+
+                resolve({ status: 'online', ms: duration, code: "CORS" });
             } else {
+                // If it dragged on or got trapped in the network pipeline, it's blocked by a firewall.
                 resolve({ status: 'blocked', ms: duration });
             }
         });
     });
 }
-
 // --- 3. UI RENDERING & TRANSLATION PIPELINE ---
 function setLanguage(lang) {
     currentLang = lang;
