@@ -7,9 +7,6 @@ const DEFAULT_SITES = [
     { name: "Google", domain: "https://google.com" }
 ];
 
-// Link your frontend securely to your live PythonAnywhere background server core
-// const BACKEND_API = "https://.pythonanywhere.com/api/check";
-
 const translations = {
     fa: {
         title: "سامانه پایش هوشمند فیلترینگ",
@@ -56,7 +53,6 @@ const translations = {
 let currentLang = 'fa';
 let customSites = JSON.parse(localStorage.getItem('custom_monitor_sites')) || DEFAULT_SITES;
 
-// --- 2. THE CORE SMART CHECKING ENGINE (PROXIED TO BACKEND) ---
 // --- 2. THE LOCAL DEVICE NETWORK CHECKING ENGINE ---
 function smartCheckAccessibility(url) {
     return new Promise((resolve) => {
@@ -65,46 +61,47 @@ function smartCheckAccessibility(url) {
             targetUrl = 'https://' + targetUrl;
         }
 
-        try {
-            const urlObj = new URL(targetUrl);
-            // Target the favicon directly to test asset delivery over local ISP
-            const faviconUrl = `${urlObj.origin}/favicon.ico?cb=${Date.now()}`;
-            
-            const startTime = performance.now();
-            const img = new Image();
-            
-            // Set up a strict local GFW drop threshold drop match
-            const timeoutId = setTimeout(() => {
-                img.src = ""; // Stop loading
-                const duration = performance.now() - startTime;
-                resolve({ status: 'blocked', ms: Math.round(duration) });
-            }, 4500);
+        const urlObj = new URL(targetUrl);
+        // Add a random parameter to prevent browser caching from masking network changes
+        const uniqueUrl = `${urlObj.origin}/?cb=${Date.now()}`;
+        const startTime = performance.now();
 
-            img.onload = function() {
-                clearTimeout(timeoutId);
-                const duration = performance.now() - startTime;
-                resolve({ status: 'online', ms: Math.round(duration), code: "OK" });
-            };
+        // Strict 4-second cutoff for dropped packets (Filtering indicators)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            const duration = Math.round(performance.now() - startTime);
+            resolve({ status: 'blocked', ms: duration });
+        }, 4000);
 
-            img.onerror = function() {
-                clearTimeout(timeoutId);
-                const duration = performance.now() - startTime;
-                
-                // 🧠 THE CENSORSHIP DETECTION LOGIC:
-                // If the connection failed instantly (under 600ms), the server rejected us (Sanction/403).
-                // If it took longer, it was likely intercepted or blocked by the network firewall.
-                if (duration < 10000) {
-                    resolve({ status: 'sanctioned', ms: Math.round(duration), code: "403" });
-                } else {
-                    resolve({ status: 'blocked', ms: Math.round(duration) });
-                }
-            };
+        // 'no-cors' lets us poke the server handshake locally without falling into browser security blocks
+        fetch(uniqueUrl, { 
+            mode: 'no-cors', 
+            credentials: 'omit',
+            signal: controller.signal 
+        })
+        .then(() => {
+            clearTimeout(timeoutId);
+            const duration = Math.round(performance.now() - startTime);
+            resolve({ status: 'online', ms: duration, code: "OK" });
+        })
+        .catch((error) => {
+            clearTimeout(timeoutId);
+            const duration = Math.round(performance.now() - startTime);
 
-            img.src = faviconUrl;
+            if (error.name === 'AbortError') return;
 
-        } catch (e) {
-            resolve({ status: 'blocked', ms: "∞" });
-        }
+            // NETWORK CENSORSHIP DETECTION RULE:
+            // Iranian websites (.ir/aparat) should be checked locally.
+            // If a foreign platform rejects us under 600ms, it's an immediate server-side geoblock.
+            const isDomestic = urlObj.hostname.endsWith('.ir') || urlObj.hostname.includes('aparat');
+
+            if (!isDomestic && duration < 600) {
+                resolve({ status: 'sanctioned', ms: duration });
+            } else {
+                resolve({ status: 'blocked', ms: duration });
+            }
+        });
     });
 }
 
@@ -175,9 +172,8 @@ async function runGridItemTest(domain, index) {
 
     if (result.status === 'online') {
         statusLabel.className = "text-xs font-semibold bg-green-950/40 text-green-400 border border-green-700/50 px-3 py-1 rounded-md text-center";
-        statusLabel.innerText = `${t.statusOnline} (${result.code})`;
+        statusLabel.innerText = t.statusOnline;
     } else if (result.status === 'sanctioned') {
-        // Distinct amber/orange alert status card formatting for geo-blocks
         statusLabel.className = "text-xs font-semibold bg-amber-950/40 text-amber-400 border border-amber-700/50 px-3 py-1 rounded-md text-center";
         statusLabel.innerText = t.statusSanctioned;
     } else {
@@ -255,17 +251,5 @@ document.getElementById('checkAllBtn').addEventListener('click', () => {
     });
 });
 
-
-if (result.status === 'online') {
-    statusLabel.className = "text-xs font-semibold bg-green-950/40 text-green-400 border border-green-700/50 px-3 py-1 rounded-md text-center";
-    statusLabel.innerText = t.statusOnline;
-} else if (result.status === 'sanctioned') {
-    statusLabel.className = "text-xs font-semibold bg-amber-950/40 text-amber-400 border border-amber-700/50 px-3 py-1 rounded-md text-center";
-    statusLabel.innerText = t.statusSanctioned;
-} else {
-    statusLabel.className = "text-xs font-semibold bg-red-950/40 text-red-400 border border-red-700/50 px-3 py-1 rounded-md text-center";
-    statusLabel.innerText = t.statusBlocked;
-}
-
-// Execute Lifecycle
+// Execute Lifecycle Initializer
 setLanguage('fa');
