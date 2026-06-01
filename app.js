@@ -96,7 +96,7 @@ function smartCheckAccessibility(url) {
             // If a foreign platform rejects us under 600ms, it's an immediate server-side geoblock.
             const isDomestic = urlObj.hostname.endsWith('.ir') || urlObj.hostname.includes('aparat');
 
-            if (!isDomestic && duration < 600) {
+            if (!isDomestic && duration < 50) {
                 resolve({ status: 'sanctioned', ms: duration });
             } else {
                 resolve({ status: 'blocked', ms: duration });
